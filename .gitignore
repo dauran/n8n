@@ -9,6 +9,9 @@ volumes/
 *.sqlite
 *.sqlite-journal
 
+# Local backups (produced by scripts/backup.sh)
+.backup/
+
 # Logs
 *.log
 logs/

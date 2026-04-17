@@ -73,7 +73,18 @@ Data is stored in two named Docker volumes:
 - `n8n_storage` → workflows, encrypted credentials, n8n config (`/home/node/.n8n`)
 - `db_storage` → PostgreSQL data
 
-Backup example: `docker run --rm -v n8n_n8n_storage:/data -v $(pwd):/backup alpine tar czf /backup/n8n-backup.tgz -C /data .`
+## Backup & Restore
+
+Two scripts live under `scripts/`:
+
+```bash
+./scripts/backup.sh                       # writes .backup/<timestamp>/
+./scripts/restore.sh .backup/<timestamp>  # restores (⚠ destructive, asks confirmation)
+```
+
+A backup contains a `pg_dump` (custom format, gzipped) of the Postgres database and a tarball of the `n8n_storage` volume. The `.backup/` folder is gitignored.
+
+⚠ **`.env` is NOT backed up** by design. Keep `N8N_ENCRYPTION_KEY` and the Postgres passwords in a secret manager — without the same encryption key, restored credentials cannot be decrypted.
 
 ## Production
 
