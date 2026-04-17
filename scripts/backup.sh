@@ -50,8 +50,22 @@ if [ -z "$(docker compose ps -q postgres 2>/dev/null)" ]; then
   echo " ok"
 fi
 
+# When running inside the `backup` sidecar, docker commands talk to the host daemon
+# via the mounted socket, so volume mounts must reference the host path — not /app.
+HOST_ROOT="${HOST_PROJECT_ROOT:-$ROOT}"
+
+# Portable sha256 (macOS has shasum; Alpine+coreutils has sha256sum).
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
 TS="$(date +%Y%m%d-%H%M%S)"
 DEST="$ROOT/.backup/$TS"
+DEST_HOST="$HOST_ROOT/.backup/$TS"
 mkdir -p "$DEST"
 
 echo "→ dumping postgres database '$POSTGRES_DB'..."
@@ -64,7 +78,7 @@ docker compose exec -T postgres pg_dump \
 echo "→ archiving n8n volume '$N8N_VOLUME'..."
 docker run --rm \
   -v "$N8N_VOLUME:/data:ro" \
-  -v "$DEST:/backup" \
+  -v "$DEST_HOST:/backup" \
   alpine tar czf /backup/n8n_storage.tgz -C /data .
 
 echo "→ writing manifest..."
@@ -80,10 +94,13 @@ echo "→ writing manifest..."
   echo "files (size / sha256):"
   for f in postgres.dump.gz n8n_storage.tgz; do
     size="$(wc -c < "$DEST/$f" | tr -d ' ')"
-    sum="$(shasum -a 256 "$DEST/$f" | awk '{print $1}')"
+    sum="$(sha256_of "$DEST/$f")"
     echo "  $f  ${size} bytes  $sum"
   done
 } > "$DEST/manifest.txt"
+
+echo "→ applying retention policy..."
+"$ROOT/scripts/prune.sh"
 
 echo ""
 echo "✔ Backup written to $DEST"

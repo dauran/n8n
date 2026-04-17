@@ -84,6 +84,24 @@ Two scripts live under `scripts/`:
 
 A backup contains a `pg_dump` (custom format, gzipped) of the Postgres database and a tarball of the `n8n_storage` volume. The `.backup/` folder is gitignored.
 
+### Automatic backups
+
+The `backup` service in `docker-compose.yml` is a cron sidecar that runs `scripts/backup.sh` on a schedule. Configure it via `BACKUP_CRON` in `.env`:
+
+```bash
+BACKUP_CRON=0 */6 * * *    # every 6 hours (default)
+BACKUP_CRON=0 2 * * *      # daily at 02:00
+BACKUP_CRON=                # empty → disable automatic backups
+```
+
+Retention policy (applied after each backup by `scripts/prune.sh`):
+
+- **Today** — keep every backup.
+- **Other days of the current ISO week** (Mon → Sun) — keep only the latest of each day.
+- **Older weeks** — keep only the latest backup of each ISO week.
+
+Logs: `docker compose logs -f backup`. Trigger a backup on demand: `docker compose exec backup run-backup`.
+
 ⚠ **`.env` is NOT backed up** by design. Keep `N8N_ENCRYPTION_KEY` and the Postgres passwords in a secret manager — without the same encryption key, restored credentials cannot be decrypted.
 
 ## Production
