@@ -43,6 +43,7 @@ set +a
 
 : "${POSTGRES_USER:?POSTGRES_USER missing in .env}"
 : "${POSTGRES_DB:?POSTGRES_DB missing in .env}"
+: "${POSTGRES_NON_ROOT_USER:?POSTGRES_NON_ROOT_USER missing in .env}"
 : "${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY missing in .env (credentials would be unreadable)}"
 
 PROJECT="${COMPOSE_PROJECT_NAME:-$(basename "$ROOT")}"
@@ -80,6 +81,28 @@ gunzip -c "$BACKUP/postgres.dump.gz" \
       -U "$POSTGRES_USER" \
       -d "$POSTGRES_DB" \
       --clean --if-exists --no-owner --no-privileges
+
+# pg_restore ran as POSTGRES_USER, so every restored object is now owned by that
+# superuser. The n8n runtime connects as POSTGRES_NON_ROOT_USER — without
+# ownership it cannot see the `migrations` table and boot-loops with
+# "relation \"migrations\" already exists".
+echo "→ reassigning public schema ownership to '$POSTGRES_NON_ROOT_USER'..."
+docker compose exec -T postgres \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' LOOP
+    EXECUTE format('ALTER TABLE public.%I OWNER TO %I', r.tablename, '$POSTGRES_NON_ROOT_USER');
+  END LOOP;
+  FOR r IN SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema='public' LOOP
+    EXECUTE format('ALTER SEQUENCE public.%I OWNER TO %I', r.sequence_name, '$POSTGRES_NON_ROOT_USER');
+  END LOOP;
+  FOR r IN SELECT table_name FROM information_schema.views WHERE table_schema='public' LOOP
+    EXECUTE format('ALTER VIEW public.%I OWNER TO %I', r.table_name, '$POSTGRES_NON_ROOT_USER');
+  END LOOP;
+END \$\$;
+SQL
 
 echo "→ restoring n8n volume '$N8N_VOLUME'..."
 # docker compose down -v removed the volume; starting postgres recreated only db_storage.
