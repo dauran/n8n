@@ -19,10 +19,10 @@ openssl rand -hex 24   # Postgres passwords
 openssl rand -hex 32   # N8N_ENCRYPTION_KEY
 
 # 3. Start the stack
-docker compose up -d
+./scripts/start.sh
 
 # 4. Follow the logs (Ctrl+C to exit)
-docker compose logs -f n8n
+./scripts/log.sh
 ```
 
 n8n is then available at [http://localhost:5678](http://localhost:5678).
@@ -31,12 +31,14 @@ On first launch, create your owner account through the UI.
 ## Useful commands
 
 ```bash
+./scripts/start.sh             # start the stack (docker compose up -d)
+./scripts/log.sh               # follow n8n logs (pass a service name to override)
+./scripts/stop.sh              # stop (data preserved)
+
 docker compose ps              # service status
-docker compose logs -f n8n     # n8n logs
-docker compose stop            # stop (data preserved)
 docker compose down            # stop + remove containers
 docker compose down -v         # ⚠️ also removes volumes (DB + workflows)
-docker compose pull && docker compose up -d   # upgrade
+docker compose pull && ./scripts/start.sh   # upgrade
 ```
 
 ## Layout
@@ -45,6 +47,9 @@ docker compose pull && docker compose up -d   # upgrade
 .
 ├── docker-compose.yml   # n8n + postgres services
 ├── scripts/
+│   ├── start.sh             # docker compose up -d
+│   ├── log.sh               # docker compose logs -f n8n
+│   ├── stop.sh              # docker compose stop
 │   ├── init-data.sh         # creates the application Postgres user on first boot
 │   ├── backup.sh            # on-demand / scheduled backup
 │   ├── restore.sh           # restore from a backup
