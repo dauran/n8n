@@ -44,7 +44,12 @@ docker compose pull && docker compose up -d   # upgrade
 ```
 .
 ├── docker-compose.yml   # n8n + postgres services
-├── init-data.sh         # creates the application Postgres user on first boot
+├── scripts/
+│   ├── init-data.sh         # creates the application Postgres user on first boot
+│   ├── backup.sh            # on-demand / scheduled backup
+│   ├── restore.sh           # restore from a backup
+│   ├── prune.sh             # applies the backup retention policy
+│   └── cron-entrypoint.sh   # entrypoint for the backup cron sidecar
 ├── .env.example         # configuration template (committed)
 ├── .env                 # local configuration (gitignored — never commit)
 ├── .gitignore

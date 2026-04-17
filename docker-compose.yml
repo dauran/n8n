@@ -14,7 +14,7 @@ services:
       - POSTGRES_NON_ROOT_PASSWORD
     volumes:
       - db_storage:/var/lib/postgresql/data
-      - ./init-data.sh:/docker-entrypoint-initdb.d/init-data.sh:ro
+      - ./scripts/init-data.sh:/docker-entrypoint-initdb.d/init-data.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
