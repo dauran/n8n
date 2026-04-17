@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local data (if using bind-mounts; the default setup uses Docker volumes)
+data/
+volumes/
+*.sqlite
+*.sqlite-journal
+
+# Logs
+*.log
+logs/
+
+# Tooling / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code (local workspace settings)
+.claude/settings.local.json
